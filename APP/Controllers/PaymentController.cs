@@ -49,15 +49,16 @@ namespace APP.Controllers
             }
         }
 
-        [HttpPost("confirm/{paymentId}")]
-        public async Task<IActionResult> ConfirmPayment(string paymentId)
+
+        [HttpPost("confirm/{paymentIntentId}")]
+        public async Task<IActionResult> ConfirmPayment(string paymentIntentId)
         {
-            if (string.IsNullOrEmpty(paymentId))
+            if (string.IsNullOrEmpty(paymentIntentId))
                 return BadRequest("Invalid Payment Intent ID");
 
             try
             {
-                var response = await _paymentService.ConfirmPaymentAsync(paymentId);
+                var response = await _paymentService.ConfirmPaymentAsync(paymentIntentId);
                 return Ok(new GeneralResponse
                 {
                     statusCode = StatusCodes.Status200OK,
@@ -83,6 +84,8 @@ namespace APP.Controllers
             }
         }
 
+        #region ConfirmAndTest
+        /*
 
         [HttpPost("create-and-confirm-test/{orderId}")]
         public async Task<IActionResult> CreateAndConfirmTestPayment(string orderId)
@@ -109,6 +112,8 @@ namespace APP.Controllers
                 });
             }
         }
+        */
+        #endregion
 
     }
 }

@@ -1,5 +1,4 @@
-﻿
-using Domain.Interfaces;
+﻿using Domain.Interfaces;
 using Domain.Interfaces.Service;
 using Domain.Models;
 using Microsoft.Extensions.Configuration;
@@ -41,10 +40,12 @@ namespace Service
                     Amount = (long)(amount * 100),
                     Currency = "usd",
                 });
+                //Console.WriteLine(paymentIntent.Id);
 
                 existingPayment.Amount = amount;
                 existingPayment.Status = paymentIntent.Status;
                 existingPayment.PaymentDate = DateTime.UtcNow;
+                
 
                 await _unitOfWork.SaveChangesAsync();
 
@@ -54,7 +55,9 @@ namespace Service
                     Amount = existingPayment.Amount,
                     Status = existingPayment.Status,
                     TransactionId = existingPayment.TransactionId,
-                    PaymentDate = existingPayment.PaymentDate
+                    PaymentDate = existingPayment.PaymentDate,
+                    OrderId = existingPayment.OrderId,
+                    paymentIntentID = paymentIntent.Id
                 };
             }
             else
@@ -67,6 +70,7 @@ namespace Service
                 };
 
                 paymentIntent = await paymentIntentService.CreateAsync(option);
+               // Console.WriteLine(paymentIntent.Id);
 
                 var payment = new Payment
                 {
@@ -93,6 +97,7 @@ namespace Service
                     TransactionId = payment.TransactionId,
                     PaymentDate = payment.PaymentDate,
                     OrderId = order.Id,
+                    paymentIntentID = paymentIntent.Id
                 };
             }
         }
@@ -133,10 +138,14 @@ namespace Service
                 Amount = payment.Amount,
                 Status = payment.Status,
                 TransactionId = payment.TransactionId,
-                PaymentDate = payment.PaymentDate
+                PaymentDate = payment.PaymentDate,
+                OrderId = payment.OrderId,
             };
         }
 
+
+        #region testAndConfirm
+        /*
         public async Task<PaymentResponseDto> CreateAndConfirmTestPaymentAsync(string orderId)
         {
             var order = await _unitOfWork.Repository<Order, string>().GetByIdAsync(orderId);
@@ -188,6 +197,8 @@ namespace Service
                 PaymentDate = payment.PaymentDate
             };
         }
+        */
+        #endregion
 
     }
 }

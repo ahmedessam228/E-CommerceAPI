@@ -6,7 +6,7 @@ namespace Domain.Interfaces.Service
     {
         Task<PaymentResponseDto> CraeteOrUpdatePaymentAsync(CreateOrUpdatePaymentDto dto);
         Task<PaymentResponseDto> ConfirmPaymentAsync(string paymentIntentId);
-        Task<PaymentResponseDto> CreateAndConfirmTestPaymentAsync(string orderId);
 
+        //Task<PaymentResponseDto> CreateAndConfirmTestPaymentAsync(string orderId);
     }
 }

@@ -8,6 +8,7 @@
         public string TransactionId { get; set; }
         public DateTime PaymentDate { get; set; }
         public string OrderId { get; set; } 
+        public string paymentIntentID { get; set; }
     }
 
 }
