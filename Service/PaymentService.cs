@@ -102,7 +102,7 @@ namespace Service
             }
         }
 
-        public async Task<PaymentResponseDto> ConfirmPaymentAsync(string paymentIntentId)
+        public async Task<ConfirmPaymentResponseDto> ConfirmPaymentAsync(string paymentIntentId)
         {
             if (string.IsNullOrEmpty(paymentIntentId))
                 throw new ArgumentException("PaymentIntentId is required", nameof(paymentIntentId));
@@ -132,7 +132,7 @@ namespace Service
 
             await _unitOfWork.SaveChangesAsync();
 
-            return new PaymentResponseDto
+            return new ConfirmPaymentResponseDto
             {
                 PaymentId = payment.Id,
                 Amount = payment.Amount,
