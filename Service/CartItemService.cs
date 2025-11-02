@@ -44,6 +44,7 @@ namespace Service
                     throw new Exception($"Not enough stock available. Only {product.StockQuantatiy} items left.");
 
                 existingItem.Quantity = newQuantity;
+                product.StockQuantatiy -= dto.Quantity;
                 await _unitOfWork.SaveChangesAsync();
                 return existingItem;
             }

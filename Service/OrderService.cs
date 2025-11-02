@@ -104,7 +104,10 @@ namespace Service
         public async Task<IEnumerable<OrderResponseDto>> GetUserOrdersAsync(string userId)
         {
             var orders = await _unitOfWork.Repository<Order, string>()
-                            .GetAllAsync(o => o.UserId == userId);
+                            .GetAllAsync(
+                                o => o.UserId == userId,
+                                includes: o => o.OrderItems
+                            );
 
             return orders.Select(o => new OrderResponseDto
             {
@@ -112,8 +115,15 @@ namespace Service
                 TotalAmount = o.TotalAmount,
                 Status = o.Status,
                 OrderDate = o.OrderDate,
+                Items = o.OrderItems.Select(oi => new OrderItemDto
+                {
+                    ProductId = oi.ProductId,
+                    Quantity = oi.Quantity,
+                    UnitPrice = oi.UnitPrice
+                }).ToList()
             });
         }
+
 
         public async Task<OrderResponseDto> UpdateOrderAsync(string orderId, string newStatus)
         {
