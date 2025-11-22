@@ -10,5 +10,7 @@ namespace Domain.Models
         [JsonIgnore]
         public virtual ICollection<Reviews> Reviews { get; set; } = new List<Reviews>();
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
+
+        public List<RefreshToken>? RefreshTokens { get; set; }
     }
 }

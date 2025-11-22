@@ -4,15 +4,20 @@ using Domain.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Shared.DTOs.Authentication;
 using Shared.Helpers;
+using Shared.Setting;
+using Stripe.Radar;
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq.Expressions;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Service
 {
@@ -134,7 +139,7 @@ namespace Service
                 return new AuthenticationModelDto { Message = errors };
             }
 
-            await _userManager.AddToRoleAsync(user,"User");
+            await _userManager.AddToRoleAsync(user,Roles.User);
 
 
             _cache.Remove($"{verifyOtpRegister.Email}_PendingUser");
@@ -216,7 +221,21 @@ namespace Service
             authenticationModel.Username = user.UserName;
             authenticationModel.Email = user.Email;
             authenticationModel.Roles = roles.ToList();
-            authenticationModel.Message = "Login successful";
+
+            if (user.RefreshTokens.Any(t => t.IsActive))
+            {
+                var activeRefreshToken = user.RefreshTokens.FirstOrDefault(t => t.IsActive);
+                authenticationModel.RefreshToken = activeRefreshToken.Token;
+                authenticationModel.RefreshTokenExpireOn = activeRefreshToken.ExpireOn;
+            }
+            else
+            {
+                var refreshToken = GenerateRefreshToken();
+                authenticationModel.RefreshToken = refreshToken.Token;
+                authenticationModel.RefreshTokenExpireOn = refreshToken.ExpireOn;
+                user.RefreshTokens.Add(refreshToken);
+                await _userManager.UpdateAsync(user);
+            }
             return authenticationModel;
         }
         public async Task<AuthenticationModelDto> ResetPasswordWithOtp(ResetPasswordRequestModelDto request)
@@ -319,6 +338,59 @@ namespace Service
 
             return result.Succeeded ? string.Empty : "Something went Wrong";
         }
+
+        public async Task<AuthenticationModelDto> RefreshTokenAsync(string token)
+        {
+            var authModel = new AuthenticationModelDto();
+            var user = await _userManager.Users.
+                SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == token));
+
+            if (user == null)
+            {
+                authModel.Message = "Invalid Token";
+                return authModel;
+            }
+
+            var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
+            if (!refreshToken.IsActive) 
+            {
+                authModel.Message = "Inactive Token";
+                return authModel;
+            }
+
+            refreshToken.RevokedOn = DateTime.UtcNow;
+            var newRefreshToken = GenerateRefreshToken();
+            user.RefreshTokens.Add(newRefreshToken);
+            await _userManager.UpdateAsync(user);
+
+            var jwtSecurityToken = await CreateJwtToken(user);
+            authModel.IsAuthenticated = true;
+            authModel.Token = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
+            authModel.ExpireOn = jwtSecurityToken.ValidTo;
+            authModel.Username = user.UserName;
+            authModel.Email = user.Email;
+            authModel.RefreshToken = newRefreshToken.Token;
+            authModel.RefreshTokenExpireOn = newRefreshToken.ExpireOn;
+            authModel.Message = "Token refreshed successfully";
+            return authModel;
+        }
+        public async Task<bool> RevokeToken(string token)
+        {
+            var user = await _userManager.Users.
+                SingleOrDefaultAsync(u => u.RefreshTokens.Any(t => t.Token == token));
+            if (user == null)
+            {
+                return false;
+            }
+            var refreshToken = user.RefreshTokens.Single(t => t.Token == token);
+            if (!refreshToken.IsActive)
+            {
+                return false;
+            }
+            refreshToken.RevokedOn = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+            return true;
+        }
         private async Task<JwtSecurityToken> CreateJwtToken(ApplicationUser user)
         {
             var userClaims = await _userManager.GetClaimsAsync(user);
@@ -337,18 +409,30 @@ namespace Service
             }.Union(userClaims)
             .Union(roleClaims);
 
-            var symmetricSecurityKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_jwt.Key));
+            var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key));
             var signingCredentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
 
             var jwt = new JwtSecurityToken
                 (
-                issuer: _jwt.Issuer,
-                audience: _jwt.Audience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(_jwt.DurationInDays),
-                signingCredentials: signingCredentials
+                    issuer: _jwt.Issuer,
+                    audience: _jwt.Audience,
+                    claims: claims,
+                    expires: DateTime.UtcNow.AddDays(_jwt.DurationInDays),
+                    signingCredentials: signingCredentials
                 );
             return jwt;
+        }
+        private RefreshToken GenerateRefreshToken()
+        {
+            var randomNumber = new byte[32];
+            using var generator = new RNGCryptoServiceProvider();
+            generator.GetBytes(randomNumber);
+            return new RefreshToken
+            {
+                Token = Convert.ToBase64String(randomNumber),
+                ExpireOn = DateTime.UtcNow.AddDays(15),
+                CreatedOn = DateTime.UtcNow
+            };
         }
     }
 }

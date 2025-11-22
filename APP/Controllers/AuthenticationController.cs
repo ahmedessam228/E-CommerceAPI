@@ -1,5 +1,6 @@
 ﻿using Azure;
 using Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shared.DTOs;
@@ -44,7 +45,7 @@ namespace APP.Controllers
 
             if (!result.IsAuthenticated)
                 return Ok(new GeneralResponse { statusCode = StatusCodes.Status200OK, message = result.Message });
-
+            setRefreshTokenInCookie(result.RefreshToken , result.RefreshTokenExpireOn); 
             return Ok(
                 new GeneralResponse
                 {
@@ -72,6 +73,8 @@ namespace APP.Controllers
             var result = await _authenticationService.LoginAsync(model);
             if (!result.IsAuthenticated)
                 return Ok(new GeneralResponse { statusCode = StatusCodes.Status200OK, message = result.Message });
+            if(!string.IsNullOrEmpty(result.RefreshToken))
+                setRefreshTokenInCookie(result.RefreshToken , result.RefreshTokenExpireOn);
             return Ok(
                 new GeneralResponse
                 {
@@ -131,6 +134,7 @@ namespace APP.Controllers
             {
                 return BadRequest(new GeneralResponse { statusCode = StatusCodes.Status400BadRequest, message = result.Message });
             }
+            setRefreshTokenInCookie(result.RefreshToken , result.RefreshTokenExpireOn);
 
             return Ok(new GeneralResponse
             {
@@ -168,6 +172,81 @@ namespace APP.Controllers
             }
             );
 
+        }
+        [HttpGet("refreshToken")]
+        public async Task<IActionResult> RefreshToken()
+        {
+            var refresh = Request.Cookies["refreshToken"];
+
+            var result = await _authenticationService.RefreshTokenAsync(refresh);
+            if (!result.IsAuthenticated)
+            {
+                return BadRequest(new GeneralResponse
+                {
+                    statusCode = StatusCodes.Status400BadRequest,
+                    message = result.Message,
+                });
+            }
+            setRefreshTokenInCookie(result.RefreshToken, result.RefreshTokenExpireOn);
+
+            return Ok(new GeneralResponse
+            {
+                statusCode = StatusCodes.Status200OK,
+                message = result.Message,
+                data = new
+                {
+                    token = result.Token,
+                    expireDate = result.ExpireOn,
+                    user = new
+                    {
+                        username = result.Username,
+                        email = result.Email,
+                    }
+                }
+            });
+        }
+        [HttpPost("revoke-token")]
+        public async Task<IActionResult> RevokeToken([FromBody] RevokeTokenDto tokenRequest)
+        {
+            var token = tokenRequest.Token ?? Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest(new GeneralResponse
+                {
+                    statusCode = StatusCodes.Status400BadRequest,
+                    message = "Token is required"
+                });
+            }
+            var result = await _authenticationService.RevokeToken(token);
+            if (!result)
+            {
+                return BadRequest(new GeneralResponse
+                {
+                    statusCode = StatusCodes.Status400BadRequest,
+                    message = "Token revocation failed"
+                });
+            }
+            return Ok(new GeneralResponse
+            {
+                statusCode = StatusCodes.Status200OK,
+                message = "Token revoked successfully"
+            });
+        }
+
+        private void setRefreshTokenInCookie(string refreshToken , DateTime expires)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = expires.ToLocalTime(),
+            };
+            Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
+        }
+        [Authorize]
+        [HttpGet("Hello")]
+        public IActionResult GetData()
+        {
+            return Ok("Hello RefrshToken");
         }
     }
 }

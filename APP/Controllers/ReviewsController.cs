@@ -1,5 +1,6 @@
 ﻿using Domain.Interfaces.Service;
 using Domain.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shared.DTOs;
@@ -9,6 +10,8 @@ namespace APP.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
+
     public class ReviewsController : ControllerBase
     {
         private readonly IReviewService _reviewService;

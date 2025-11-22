@@ -12,5 +12,7 @@ namespace Domain.Interfaces
         Task<AuthenticationModelDto> VerifyOtp(VerifyOtpRequestModelDto verifyOtpRequest);
         Task<AuthenticationModelDto> ResetPasswordWithOtp(ResetPasswordRequestModelDto resetPasswordRequest);
         Task<string> AddToRole(AddRoleDto addRole);
+        Task<AuthenticationModelDto>RefreshTokenAsync(string refreshToken);
+        Task<bool> RevokeToken(string token);
     }
 }

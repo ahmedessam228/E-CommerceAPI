@@ -1,4 +1,6 @@
 ﻿
+using System.Text.Json.Serialization;
+
 namespace Shared.DTOs.Authentication
 {
     public class AuthenticationModelDto
@@ -10,6 +12,9 @@ namespace Shared.DTOs.Authentication
         public List<string> Roles { get; set; }
         public string Token { get; set; }
         public DateTime ExpireOn { get; set; }
+        [JsonIgnore]
+        public string? RefreshToken { get; set; }
+        public DateTime RefreshTokenExpireOn { get; set; }
         public string? ProfilePicture { get; set; } = string.Empty;
     }
 }

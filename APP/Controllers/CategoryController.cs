@@ -1,4 +1,5 @@
 ﻿using Domain.Interfaces.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shared.DTOs;
@@ -8,6 +9,8 @@ namespace APP.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
+
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;

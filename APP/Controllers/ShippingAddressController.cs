@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Domain.Interfaces.Service;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Domain.Interfaces.Service;
 using Shared.DTOs;
 using Shared.DTOs.ShippingAddress;
 
@@ -8,6 +9,8 @@ namespace APP.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
+
     public class ShippingAddressController : ControllerBase
     {
         private readonly IShippingAddress _shippingAddressService;
